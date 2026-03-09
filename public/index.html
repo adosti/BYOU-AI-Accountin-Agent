@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BYou Platform</title>
+<style>
+  /* ── Reset & base ─────────────────────────────── */
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --sand:#f5f0e8;--cream:#faf7f2;--brown:#8b5e3c;--brown-light:#c49a6c;
+    --brown-dark:#5c3d20;--rose:#d4896a;--rose-light:#e8b4a0;
+    --text:#3d2b1f;--text-muted:#8b7355;--border:#e8ddd0;
+    --white:#ffffff;--shadow:0 2px 12px rgba(61,43,31,.10);
+    --radius:12px;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--sand);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+  button{cursor:pointer;border:none;outline:none;font-family:inherit}
+  input,select,textarea{font-family:inherit;outline:none}
+
+  /* ── Login overlay ────────────────────────────── */
+  #login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown) 60%,var(--rose) 100%);
+    display:flex;align-items:center;justify-content:center;z-index:1000}
+  .login-card{background:var(--white);border-radius:20px;padding:48px 40px;
+    width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);text-align:center}
+  .login-card h1{font-size:2.2rem;color:var(--brown-dark);margin-bottom:4px;letter-spacing:-0.5px}
+  .login-card p{color:var(--text-muted);margin-bottom:32px;font-size:.95rem}
+  .login-field{text-align:left;margin-bottom:16px}
+  .login-field label{display:block;font-size:.82rem;font-weight:600;color:var(--text-muted);
+    text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .login-field input{width:100%;padding:12px 16px;border:2px solid var(--border);border-radius:10px;
+    font-size:1rem;transition:border-color .2s;background:var(--cream)}
+  .login-field input:focus{border-color:var(--brown)}
+  .login-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--brown-dark),var(--brown));
+    color:var(--white);border-radius:10px;font-size:1rem;font-weight:600;margin-top:8px;
+    transition:opacity .2s;letter-spacing:.3px}
+  .login-btn:hover{opacity:.9}
+  #login-error{color:#e05555;font-size:.87rem;margin-top:12px;min-height:20px}
+
+  /* ── App shell ────────────────────────────────── */
+  #app{display:none;flex:1;flex-direction:column}
+  .app-header{background:linear-gradient(135deg,var(--brown-dark) 0%,var(--brown) 100%);
+    color:var(--white);padding:0 24px;height:58px;display:flex;align-items:center;
+    justify-content:space-between;flex-shrink:0}
+  .app-header h1{font-size:1.3rem;font-weight:700;letter-spacing:-.3px}
+  .app-header nav{display:flex;gap:4px}
+  .nav-btn{background:rgba(255,255,255,.12);color:var(--white);border-radius:8px;
+    padding:7px 16px;font-size:.88rem;font-weight:500;transition:background .15s;border:none}
+  .nav-btn:hover{background:rgba(255,255,255,.22)}
+  .nav-btn.active{background:rgba(255,255,255,.28);font-weight:700}
+  .logout-btn{background:rgba(255,255,255,.12);color:var(--white);border-radius:8px;
+    padding:6px 14px;font-size:.82rem;border:none;transition:background .15s}
+  .logout-btn:hover{background:rgba(255,255,255,.22)}
+
+  /* ── Pages ────────────────────────────────────── */
+  .page{display:none;flex:1;overflow:auto}
+  .page.active{display:flex;flex-direction:column}
+
+  /* ── Dashboard ────────────────────────────────── */
+  .dashboard{padding:28px;max-width:1100px;margin:0 auto;width:100%}
+  .dash-header{margin-bottom:24px}
+  .dash-header h2{font-size:1.6rem;color:var(--brown-dark)}
+  .dash-header p{color:var(--text-muted);font-size:.92rem;margin-top:4px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+  .kpi-card{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  .kpi-label{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--text-muted);margin-bottom:8px}
+  .kpi-value{font-size:1.9rem;font-weight:700;color:var(--brown-dark);line-height:1}
+  .kpi-delta{font-size:.8rem;margin-top:6px;display:block}
+  .kpi-delta.up{color:#3a9e5c}
+  .kpi-delta.down{color:#e05555}
+  .kpi-delta.neutral{color:var(--text-muted)}
+  .dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .dash-card{background:var(--white);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+  .dash-card h3{font-size:1rem;font-weight:600;color:var(--brown-dark);margin-bottom:16px}
+  .expense-table{width:100%;border-collapse:collapse}
+  .expense-table th{font-size:.76rem;font-weight:600;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--text-muted);padding:8px 0;text-align:left;border-bottom:2px solid var(--border)}
+  .expense-table td{padding:10px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+  .category-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.75rem;
+    font-weight:600;background:var(--sand);color:var(--brown)}
+  .empty-state{text-align:center;padding:32px;color:var(--text-muted)}
+  .quick-action-btn{padding:12px 18px;background:var(--sand);border:1.5px solid var(--border);
+    border-radius:10px;font-size:.92rem;text-align:left;transition:border-color .15s;width:100%;display:block;margin-bottom:10px}
+  .quick-action-btn:hover{border-color:var(--brown)}
+
+  /* ── Receipts ─────────────────────────────────── */
+  .receipts-layout{display:grid;grid-template-columns:1fr 1fr;flex:1;height:calc(100vh - 58px)}
+  .receipts-left{padding:28px;border-right:1px solid var(--border);overflow:auto;background:var(--cream)}
+  .receipts-right{padding:28px;overflow:auto;background:var(--white)}
+  .upload-zone{border:2.5px dashed var(--brown-light);border-radius:16px;padding:48px 24px;
+    text-align:center;cursor:pointer;transition:all .2s;background:var(--sand);margin-bottom:20px}
+  .upload-zone:hover,.upload-zone.drag-over{border-color:var(--brown);background:rgba(139,94,60,.06)}
+  .upload-zone .icon{font-size:2.8rem;margin-bottom:12px}
+  .upload-zone h3{font-size:1.05rem;font-weight:600;color:var(--brown-dark);margin-bottom:6px}
+  .upload-zone p{font-size:.85rem;color:var(--text-muted)}
+  .process-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--brown-dark),var(--brown));
+    color:var(--white);border-radius:10px;font-size:1rem;font-weight:600;margin-bottom:12px;
+    transition:opacity .2s;letter-spacing:.2px}
+  .process-btn:hover{opacity:.9}
+  .process-btn:disabled{opacity:.5;cursor:not-allowed}
+  .steps-panel{background:var(--white);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  .steps-panel h3{font-size:.9rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--text-muted);margin-bottom:16px}
+  .step-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .step-row:last-child{border-bottom:none}
+  .step-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:1rem;flex-shrink:0}
+  .step-icon.pending{background:var(--sand);color:var(--text-muted)}
+  .step-icon.running{background:rgba(196,154,108,.2);color:var(--brown);animation:pulse 1s infinite}
+  .step-icon.done{background:rgba(58,158,92,.15);color:#3a9e5c}
+  .step-icon.error{background:rgba(224,85,85,.12);color:#e05555}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .step-label{font-size:.9rem;font-weight:500}
+  .step-label small{display:block;color:var(--text-muted);font-size:.78rem;margin-top:2px}
+  .result-card{background:var(--cream);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+  .result-card h3{font-size:1rem;font-weight:700;color:var(--brown-dark);margin-bottom:14px}
+  .result-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;
+    border-bottom:1px solid var(--border);font-size:.9rem}
+  .result-row:last-child{border-bottom:none}
+  .result-row span:first-child{color:var(--text-muted);font-weight:500}
+  .result-row span:last-child{font-weight:600;color:var(--brown-dark)}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700}
+  .badge.success{background:rgba(58,158,92,.12);color:#3a9e5c}
+  .badge.partial{background:rgba(245,186,69,.15);color:#c47a00}
+  .badge.error{background:rgba(224,85,85,.12);color:#e05555}
+  .drive-link-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;
+    background:var(--sand);border:1.5px solid var(--border);border-radius:8px;
+    font-size:.83rem;font-weight:500;color:var(--brown-dark);transition:all .15s}
+  .drive-link-btn:hover{border-color:var(--brown)}
+
+  /* ── Social ───────────────────────────────────── */
+  .social-layout{display:grid;grid-template-columns:360px 1fr;flex:1;height:calc(100vh - 58px)}
+  .social-left{padding:24px;border-right:1px solid var(--border);overflow:auto;background:var(--cream)}
+  .social-right{padding:24px;overflow:auto;background:var(--white)}
+  .form-group{margin-bottom:16px}
+  .form-group label{display:block;font-size:.8rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.4px;color:var(--text-muted);margin-bottom:6px}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;
+    border:2px solid var(--border);border-radius:10px;font-size:.92rem;background:var(--white);
+    transition:border-color .2s}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--brown)}
+  .form-group textarea{resize:vertical;min-height:80px}
+  .checkbox-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .checkbox-group label{display:flex;align-items:center;gap:6px;padding:7px 14px;
+    border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:.85rem;
+    font-weight:500;transition:all .15s;user-select:none}
+  .checkbox-group input[type=checkbox]{display:none}
+  .checkbox-group label.checked{border-color:var(--brown);background:rgba(139,94,60,.08);color:var(--brown)}
+  .generate-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--brown-dark),var(--rose));
+    color:var(--white);border-radius:10px;font-size:1rem;font-weight:600;margin-top:4px;
+    transition:opacity .2s;letter-spacing:.2px}
+  .generate-btn:hover{opacity:.9}
+  .generate-btn:disabled{opacity:.5;cursor:not-allowed}
+  .post-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+  .post-card{background:var(--cream);border-radius:var(--radius);padding:18px;
+    box-shadow:var(--shadow);border:1px solid var(--border)}
+  .post-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .platform-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+    border-radius:20px;font-size:.75rem;font-weight:700;text-transform:capitalize}
+  .platform-tag.instagram{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:white}
+  .platform-tag.facebook{background:#1877f2;color:white}
+  .platform-tag.tiktok{background:#010101;color:white}
+  .platform-tag.default-platform{background:var(--brown);color:white}
+  .type-label{font-size:.75rem;color:var(--text-muted);font-weight:500}
+  .post-caption{font-size:.9rem;line-height:1.6;color:var(--text);margin-bottom:10px;white-space:pre-line}
+  .post-hashtags{font-size:.8rem;color:var(--brown);font-style:italic;margin-bottom:8px}
+  .post-cta{font-size:.83rem;font-weight:600;color:var(--brown-dark);padding:6px 12px;
+    background:rgba(139,94,60,.08);border-radius:6px;display:inline-block}
+  .copy-btn{padding:5px 12px;border:1.5px solid var(--border);border-radius:7px;
+    font-size:.75rem;font-weight:500;background:transparent;color:var(--text-muted);
+    transition:all .15s}
+  .copy-btn:hover{border-color:var(--brown);color:var(--brown)}
+  .social-placeholder{display:flex;flex-direction:column;align-items:center;
+    justify-content:center;flex:1;height:100%;color:var(--text-muted);text-align:center;padding:40px}
+  .social-placeholder .ph-icon{font-size:3.5rem;margin-bottom:16px;opacity:.4}
+
+  /* ── Drive ────────────────────────────────────── */
+  .drive-layout{display:grid;grid-template-columns:240px 1fr;flex:1;height:calc(100vh - 58px)}
+  .drive-sidebar{background:var(--cream);border-right:1px solid var(--border);overflow:auto;padding:16px}
+  .drive-sidebar h3{font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--text-muted);padding:8px 8px 6px;margin-bottom:4px}
+  .tree-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+    cursor:pointer;font-size:.9rem;transition:background .15s;color:var(--text)}
+  .tree-item:hover{background:rgba(139,94,60,.08)}
+  .tree-item.active{background:rgba(139,94,60,.12);color:var(--brown-dark);font-weight:600}
+  .drive-main{display:flex;flex-direction:column;overflow:hidden}
+  .drive-toolbar{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;
+    align-items:center;gap:12px;background:var(--white)}
+  .breadcrumb{display:flex;align-items:center;gap:6px;font-size:.9rem;flex:1;flex-wrap:wrap}
+  .bc-item{color:var(--brown);cursor:pointer;font-weight:500}
+  .bc-item:hover{text-decoration:underline}
+  .bc-sep{color:var(--text-muted)}
+  .search-box{position:relative}
+  .search-box input{padding:9px 14px 9px 38px;border:2px solid var(--border);border-radius:10px;
+    font-size:.9rem;width:240px;transition:border-color .2s;background:var(--cream)}
+  .search-box input:focus{border-color:var(--brown)}
+  .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    color:var(--text-muted);font-size:1rem;pointer-events:none}
+  .drive-content{flex:1;overflow:auto;padding:20px}
+  .drive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .drive-item{background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);
+    padding:16px;cursor:pointer;transition:all .15s;text-align:center}
+  .drive-item:hover{border-color:var(--brown-light);box-shadow:var(--shadow);transform:translateY(-1px)}
+  .file-icon{font-size:2.2rem;margin-bottom:8px}
+  .file-name{font-size:.82rem;font-weight:500;color:var(--text);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+  .file-meta{font-size:.73rem;color:var(--text-muted);margin-top:4px}
+  .drive-section-label{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--text-muted);margin:8px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+  .drive-unconfigured{display:flex;flex-direction:column;align-items:center;
+    justify-content:center;flex:1;height:100%;color:var(--text-muted);text-align:center;padding:40px}
+  .drive-unconfigured .uc-icon{font-size:3rem;margin-bottom:16px;opacity:.4}
+  .drive-unconfigured h3{color:var(--brown-dark);margin-bottom:8px}
+  .drive-unconfigured code{background:var(--sand);padding:2px 8px;border-radius:4px;
+    font-size:.8rem;color:var(--brown)}
+
+  /* ── Spinner / shimmer / toast ─────────────────── */
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);
+    border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;
+    vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .shimmer-block{border-radius:6px;background:linear-gradient(90deg,var(--border) 25%,var(--sand) 50%,var(--border) 75%);
+    background-size:400% 100%;animation:shimmer 1.4s infinite}
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+  #toast{position:fixed;bottom:24px;right:24px;background:var(--brown-dark);color:white;
+    padding:12px 20px;border-radius:10px;font-size:.9rem;z-index:999;
+    transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
+  #toast.show{transform:translateY(0);opacity:1}
+
+  @media(max-width:900px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .dash-grid{grid-template-columns:1fr}
+    .receipts-layout,.social-layout{grid-template-columns:1fr}
+    .drive-layout{grid-template-columns:1fr}
+    .drive-sidebar{display:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Login overlay ──────────────────────────────────────────────────────── -->
+<div id="login-overlay">
+  <div class="login-card">
+    <h1>BYou</h1>
+    <p>Business Platform — sign in to continue</p>
+    <div class="login-field">
+      <label>Username</label>
+      <input id="login-user" type="text" placeholder="byou" autocomplete="username"/>
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── App shell ──────────────────────────────────────────────────────────── -->
+<div id="app" style="display:none;flex:1;flex-direction:column">
+  <header class="app-header">
+    <h1>✨ BYou Platform</h1>
+    <nav>
+      <button class="nav-btn active" onclick="navigate('dashboard')">Dashboard</button>
+      <button class="nav-btn"        onclick="navigate('receipts')">Receipts AI</button>
+      <button class="nav-btn"        onclick="navigate('social')">Social AI</button>
+      <button class="nav-btn"        onclick="navigate('drive')">Drive</button>
+    </nav>
+    <button class="logout-btn" onclick="doLogout()">Sign out</button>
+  </header>
+
+  <!-- Dashboard ─────────────────────────────────────────────────────────── -->
+  <section id="page-dashboard" class="page active">
+    <div class="dashboard">
+      <div class="dash-header">
+        <h2>Business Overview</h2>
+        <p id="dash-period" style="color:var(--text-muted);font-size:.92rem;margin-top:4px">Loading…</p>
+      </div>
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Revenue</div>
+          <div class="shimmer-block" style="height:36px;width:110px;margin-top:8px"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Expenses</div>
+          <div class="shimmer-block" style="height:36px;width:110px;margin-top:8px"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Net Profit</div>
+          <div class="shimmer-block" style="height:36px;width:110px;margin-top:8px"></div></div>
+        <div class="kpi-card"><div class="kpi-label">Net Position</div>
+          <div class="shimmer-block" style="height:36px;width:110px;margin-top:8px"></div></div>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-card">
+          <h3>📋 Recent Expenses</h3>
+          <div id="expenses-table-wrap"><div class="empty-state">Loading…</div></div>
+        </div>
+        <div class="dash-card">
+          <h3>⚡ Quick Actions</h3>
+          <button class="quick-action-btn" onclick="navigate('receipts')">📸 &nbsp;Process a new receipt</button>
+          <button class="quick-action-btn" onclick="navigate('social')">✨ &nbsp;Generate social content</button>
+          <button class="quick-action-btn" onclick="navigate('drive')">📁 &nbsp;Browse Google Drive</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Receipts AI ───────────────────────────────────────────────────────── -->
+  <section id="page-receipts" class="page">
+    <div class="receipts-layout">
+      <div class="receipts-left">
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--brown-dark);margin-bottom:6px">Receipts AI</h2>
+        <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:20px">Upload a receipt — Claude Vision extracts the data and archives it to Drive.</p>
+
+        <div class="upload-zone" id="upload-zone"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="handleDrop(event)"
+             onclick="document.getElementById('file-input').click()">
+          <div class="icon">📄</div>
+          <h3>Drop receipt here or click to browse</h3>
+          <p>JPEG · PNG · PDF &nbsp;•&nbsp; Max 20 MB</p>
+          <input type="file" id="file-input" accept="image/jpeg,image/png,application/pdf" onchange="fileSelected(event)" style="display:none"/>
+        </div>
+
+        <div id="file-selected" style="display:none;background:var(--sand);border-radius:10px;
+          padding:12px 16px;margin-bottom:14px;font-size:.9rem;align-items:center;gap:10px">
+          <span>📎</span><span id="file-name-display"></span>
+        </div>
+
+        <button class="process-btn" id="process-btn" disabled onclick="processReceipt()">
+          Process Receipt
+        </button>
+
+        <div class="steps-panel">
+          <h3>Processing steps</h3>
+          <div id="steps-list">
+            <div class="step-row">
+              <div class="step-icon pending" id="step-icon-0">1</div>
+              <div class="step-label">Claude Vision extraction<small id="step-detail-0">Reads vendor, date, amount, tax</small></div>
+            </div>
+            <div class="step-row">
+              <div class="step-icon pending" id="step-icon-1">2</div>
+              <div class="step-label">Save to expense tracker<small id="step-detail-1">Writes to local SQLite DB</small></div>
+            </div>
+            <div class="step-row">
+              <div class="step-icon pending" id="step-icon-2">3</div>
+              <div class="step-label">Archive to Google Drive<small id="step-detail-2">MCP agent uploads the file</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="receipts-right">
+        <h2 style="font-size:1.3rem;font-weight:700;color:var(--brown-dark);margin-bottom:20px">Extracted Data</h2>
+        <div id="receipt-result">
+          <div class="empty-state" style="padding:60px 0">
+            <div style="font-size:3rem;margin-bottom:12px">🧾</div>
+            <p>Upload a receipt to see extracted data here</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Social AI ─────────────────────────────────────────────────────────── -->
+  <section id="page-social" class="page">
+    <div class="social-layout">
+      <div class="social-left">
+        <h2 style="font-size:1.2rem;font-weight:700;color:var(--brown-dark);margin-bottom:4px">Social AI</h2>
+        <p style="color:var(--text-muted);font-size:.83rem;margin-bottom:20px">Generate on-brand posts powered by Claude.</p>
+
+        <div class="form-group">
+          <label>Content type</label>
+          <select id="content-type">
+            <option value="quote">Inspiring Quote for Women</option>
+            <option value="beforeafter">Before &amp; After Caption</option>
+            <option value="promo">Promotional Offer</option>
+            <option value="edu">Educational Skincare Tip</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Topic / Treatment</label>
+          <input id="topic" type="text" placeholder="e.g. Botox, Lip Fillers, Summer Glow…"/>
+        </div>
+        <div class="form-group">
+          <label>Platforms</label>
+          <div class="checkbox-group">
+            <label class="checked" id="plat-Instagram" onclick="togglePlatform('Instagram',this)">
+              <input type="checkbox" checked/> Instagram
+            </label>
+            <label class="checked" id="plat-Facebook" onclick="togglePlatform('Facebook',this)">
+              <input type="checkbox" checked/> Facebook
+            </label>
+            <label id="plat-TikTok" onclick="togglePlatform('TikTok',this)">
+              <input type="checkbox"/> TikTok
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Posts per platform</label>
+          <select id="post-count">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Extra context (optional)</label>
+          <textarea id="extra-context" placeholder="e.g. Running a 20% off promo, targeting women 35–55…"></textarea>
+        </div>
+        <button class="generate-btn" id="generate-btn" onclick="generateSocial()">✨ Generate Posts</button>
+      </div>
+
+      <div class="social-right" id="social-results">
+        <div class="social-placeholder">
+          <div class="ph-icon">✨</div>
+          <p>Fill in the form and click <strong>Generate Posts</strong> to create on-brand social content</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Drive ─────────────────────────────────────────────────────────────── -->
+  <section id="page-drive" class="page">
+    <div class="drive-layout">
+      <div class="drive-sidebar">
+        <h3>My Drive</h3>
+        <div class="tree-item active" id="tree-root" onclick="driveNavigate('root','My Drive')">
+          📁 My Drive
+        </div>
+        <div id="tree-folders"></div>
+      </div>
+      <div class="drive-main">
+        <div class="drive-toolbar">
+          <div class="breadcrumb" id="breadcrumb">
+            <span class="bc-item" onclick="driveNavigate('root','My Drive')">My Drive</span>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input id="drive-search" type="text" placeholder="Search files…" oninput="driveLiveSearch(this.value)"/>
+          </div>
+        </div>
+        <div class="drive-content" id="drive-content">
+          <div class="empty-state">Loading Drive…</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ────────────────────────────────────────────────────────────────────────────
+// Auth
+// ────────────────────────────────────────────────────────────────────────────
+var TOKEN = localStorage.getItem('byou_token') || '';
+
+function authHeaders() {
+  return { 'Authorization': 'Bearer ' + TOKEN };
+}
+
+async function api(method, path, body, isMultipart) {
+  var opts = { method: method, headers: Object.assign({}, authHeaders()) };
+  if (body && !isMultipart) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  } else if (body && isMultipart) {
+    opts.body = body;
+  }
+  var res = await fetch(path, opts);
+  if (res.status === 401) { doLogout(); throw new Error('Session expired — please sign in again'); }
+  var data = await res.json();
+  if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+async function doLogin() {
+  var btn = document.getElementById('login-btn');
+  var errEl = document.getElementById('login-error');
+  var username = document.getElementById('login-user').value.trim();
+  var password = document.getElementById('login-pass').value;
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Signing in…';
+  try {
+    var res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, password: password }),
+    });
+    var data = await res.json();
+    if (!data.token) throw new Error(data.error || 'Login failed');
+    TOKEN = data.token;
+    localStorage.setItem('byou_token', TOKEN);
+    showApp();
+  } catch (e) {
+    errEl.textContent = e.message;
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+function doLogout() {
+  TOKEN = '';
+  localStorage.removeItem('byou_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = 'Sign In';
+}
+
+function showApp() {
+  document.getElementById('login-overlay').style.display = 'none';
+  var appEl = document.getElementById('app');
+  appEl.style.display = 'flex';
+  appEl.style.flexDirection = 'column';
+  loadDashboard();
+}
+
+document.getElementById('login-pass').addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Navigation
+// ────────────────────────────────────────────────────────────────────────────
+var NAV_PAGES = ['dashboard','receipts','social','drive'];
+
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b, i) {
+    b.classList.toggle('active', NAV_PAGES[i] === page);
+  });
+  document.getElementById('page-' + page).classList.add('active');
+  if (page === 'drive') loadDrive('root');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Toast
+// ────────────────────────────────────────────────────────────────────────────
+var toastTimer = null;
+function toast(msg, dur) {
+  dur = dur || 2800;
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove('show'); }, dur);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Dashboard
+// ────────────────────────────────────────────────────────────────────────────
+function fmtMoney(n) {
+  if (n == null) return '—';
+  return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function deltaHtml(cur, prev, lowerIsBetter) {
+  if (!prev && prev !== 0) return '<span class="kpi-delta neutral">No prior data</span>';
+  if (prev === 0) return '<span class="kpi-delta neutral">—</span>';
+  var pct = ((cur - prev) / Math.abs(prev) * 100).toFixed(1);
+  var isUp = parseFloat(pct) > 0;
+  var isGood = lowerIsBetter ? !isUp : isUp;
+  var cls = parseFloat(pct) === 0 ? 'neutral' : (isGood ? 'up' : 'down');
+  return '<span class="kpi-delta ' + cls + '">' + (isUp ? '+' : '') + pct + '% vs last month</span>';
+}
+
+async function loadDashboard() {
+  try {
+    var d = await api('GET', '/api/dashboard');
+    document.getElementById('dash-period').textContent = d.period;
+
+    document.getElementById('kpi-grid').innerHTML =
+      kpiCard('Revenue',    fmtMoney(d.current.revenue),   deltaHtml(d.current.revenue,   d.last.revenue,   false)) +
+      kpiCard('Expenses',   fmtMoney(d.current.expenses),  deltaHtml(d.current.expenses,  d.last.expenses,  true))  +
+      kpiCard('Net Profit', fmtMoney(d.current.netProfit), deltaHtml(d.current.netProfit, d.last.netProfit, false), d.current.netProfit < 0 ? '#e05555' : '') +
+      kpiCard('Net Position', fmtMoney(d.cashOnHand), '<span class="kpi-delta neutral">All-time</span>');
+
+    var wrap = document.getElementById('expenses-table-wrap');
+    if (!d.recentExpenses || d.recentExpenses.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No expenses this month yet</div>';
+    } else {
+      wrap.innerHTML = '<table class="expense-table"><thead><tr>' +
+        '<th>Vendor</th><th>Date</th><th>Category</th><th style="text-align:right">Amount</th>' +
+        '</tr></thead><tbody>' +
+        d.recentExpenses.map(function(e) {
+          return '<tr><td>' + esc(e.vendor) + '</td>' +
+            '<td style="color:var(--text-muted)">' + e.date + '</td>' +
+            '<td><span class="category-pill">' + esc(e.category) + '</span></td>' +
+            '<td style="text-align:right;font-weight:600">' + e.currency + ' ' + Number(e.amount).toFixed(2) + '</td></tr>';
+        }).join('') +
+        '</tbody></table>';
+    }
+  } catch (e) {
+    document.getElementById('dash-period').textContent = 'Could not load — ' + e.message;
+  }
+}
+
+function kpiCard(label, value, deltaStr, valueColor) {
+  return '<div class="kpi-card">' +
+    '<div class="kpi-label">' + label + '</div>' +
+    '<div class="kpi-value"' + (valueColor ? ' style="color:' + valueColor + '"' : '') + '>' + value + '</div>' +
+    (deltaStr || '') +
+    '</div>';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Receipts
+// ────────────────────────────────────────────────────────────────────────────
+var selectedFile = null;
+
+function fileSelected(e) {
+  var file = e.target.files[0];
+  if (file) setSelectedFile(file);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file) setSelectedFile(file);
+}
+
+function setSelectedFile(file) {
+  selectedFile = file;
+  document.getElementById('file-name-display').textContent = file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
+  document.getElementById('file-selected').style.display = 'flex';
+  document.getElementById('process-btn').disabled = false;
+  resetSteps();
+  document.getElementById('receipt-result').innerHTML =
+    '<div class="empty-state" style="padding:60px 0">' +
+    '<div style="font-size:3rem;margin-bottom:12px">🧾</div>' +
+    '<p>Click <strong>Process Receipt</strong> to analyse this file</p></div>';
+}
+
+function resetSteps() {
+  for (var i = 0; i < 3; i++) setStep(i, 'pending', null);
+}
+
+var STEP_DEFAULT_DETAIL = [
+  'Reads vendor, date, amount, tax',
+  'Writes to local SQLite DB',
+  'MCP agent uploads the file',
+];
+
+function setStep(i, state, detail) {
+  var icon = document.getElementById('step-icon-' + i);
+  var det  = document.getElementById('step-detail-' + i);
+  if (!icon) return;
+  icon.className = 'step-icon ' + state;
+  var icons = { pending: String(i+1), running: '⏳', done: '✓', error: '✗' };
+  icon.textContent = icons[state] || String(i+1);
+  if (det) det.textContent = detail != null ? detail : STEP_DEFAULT_DETAIL[i];
+}
+
+async function processReceipt() {
+  if (!selectedFile) return;
+  var btn = document.getElementById('process-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Processing…';
+  setStep(0, 'running', null);
+
+  var form = new FormData();
+  form.append('receipt', selectedFile);
+
+  var t1 = setTimeout(function() { setStep(0, 'done', null); setStep(1, 'running', null); }, 3500);
+  var t2 = setTimeout(function() { setStep(1, 'done', null); setStep(2, 'running', null); }, 7000);
+
+  try {
+    var result = await api('POST', '/receipts', form, true);
+    clearTimeout(t1); clearTimeout(t2);
+
+    if (result.status === 'error') {
+      setStep(0, 'error', (result.errors && result.errors[0]) || 'Failed');
+    } else {
+      var conf = result.metrics && result.metrics.extractionConfidence != null
+        ? Math.round(result.metrics.extractionConfidence * 100) + '% confidence' : 'complete';
+      setStep(0, 'done', conf);
+      setStep(1, result.expenseId ? 'done' : 'error',
+        result.expenseId ? 'Saved (ID: ' + result.expenseId.slice(0,8) + '…)' : 'Not saved');
+      var driveErr = result.errors && result.errors.find(function(e) { return /drive|agent/i.test(e); });
+      setStep(2,
+        result.driveFileId ? 'done' : (driveErr ? 'error' : 'pending'),
+        result.driveFileId ? 'Archived ✓' : (driveErr || STEP_DEFAULT_DETAIL[2]));
+    }
+
+    renderReceiptResult(result);
+    if (result.status === 'success') toast('✓ Receipt processed successfully');
+    else if (result.status === 'partial') toast('⚠ Receipt partially processed');
+    else toast('✗ Processing failed', 3500);
+    loadDashboard();
+  } catch (e) {
+    clearTimeout(t1); clearTimeout(t2);
+    setStep(0, 'error', e.message);
+    document.getElementById('receipt-result').innerHTML =
+      '<div class="result-card"><h3 style="color:#e05555">Error</h3>' +
+      '<p style="font-size:.9rem;color:#e05555">' + esc(e.message) + '</p></div>';
+    toast('Error: ' + e.message, 4000);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Process Another Receipt';
+}
+
+function renderReceiptResult(r) {
+  var d = r.extractedData;
+  var statusCls = r.status === 'success' ? 'success' : r.status === 'partial' ? 'partial' : 'error';
+  var statusLabel = r.status === 'success' ? '✓ Success' : r.status === 'partial' ? '⚠ Partial' : '✗ Error';
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+    '<span class="badge ' + statusCls + '">' + statusLabel + '</span>' +
+    '<span style="color:var(--text-muted);font-size:.82rem">⏱ ' + (r.processingTimeMs / 1000).toFixed(1) + 's</span></div>';
+
+  if (d) {
+    html += '<div class="result-card"><h3>📋 Receipt Details</h3>' +
+      rrow('Vendor', esc(d.vendor)) +
+      rrow('Date', d.date) +
+      rrow('Amount', d.currency + ' ' + d.amount.toFixed(2)) +
+      rrow('Category', d.category) +
+      (d.taxAmount != null ? rrow('Tax', d.currency + ' ' + d.taxAmount.toFixed(2)) : '') +
+      (d.tipAmount != null ? rrow('Tip', d.currency + ' ' + d.tipAmount.toFixed(2)) : '') +
+      (d.paymentMethod ? rrow('Payment', d.paymentMethod) : '') +
+      (d.receiptNumber ? rrow('Receipt #', d.receiptNumber) : '') +
+      '</div>';
+  }
+
+  if (d && d.lineItems && d.lineItems.length) {
+    html += '<div class="result-card"><h3>🧾 Line Items</h3>' +
+      d.lineItems.map(function(li) { return rrow(esc(li.description), '$' + li.amount.toFixed(2)); }).join('') +
+      '</div>';
+  }
+
+  html += '<div class="result-card"><h3>📊 Metrics</h3>' +
+    (r.metrics ? rrow('Extraction confidence', Math.round(r.metrics.extractionConfidence * 100) + '%') : '') +
+    (r.metrics ? rrow('Time saved', r.metrics.timeSavedMinutes + ' min') : '') +
+    (r.expenseId ? rrow('Expense ID', r.expenseId.slice(0,8) + '…') : '');
+  if (r.driveFileUrl) {
+    html += '<div class="result-row"><span>Drive archive</span>' +
+      '<a href="' + r.driveFileUrl + '" target="_blank" class="drive-link-btn">Open in Drive ↗</a></div>';
+  }
+  html += '</div>';
+
+  if (r.errors && r.errors.length) {
+    html += '<div class="result-card" style="border:1.5px solid rgba(224,85,85,.3)"><h3 style="color:#e05555">⚠ Errors</h3>' +
+      r.errors.map(function(e) { return '<p style="font-size:.88rem;color:#e05555;margin-bottom:4px">• ' + esc(e) + '</p>'; }).join('') +
+      '</div>';
+  }
+
+  document.getElementById('receipt-result').innerHTML = html;
+}
+
+function rrow(label, val) {
+  return '<div class="result-row"><span>' + label + '</span><span>' + val + '</span></div>';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Social AI
+// ────────────────────────────────────────────────────────────────────────────
+var checkedPlatforms = { Instagram: true, Facebook: true, TikTok: false };
+
+function togglePlatform(name, el) {
+  checkedPlatforms[name] = !checkedPlatforms[name];
+  el.classList.toggle('checked', checkedPlatforms[name]);
+  el.querySelector('input').checked = checkedPlatforms[name];
+}
+
+async function generateSocial() {
+  var topic = document.getElementById('topic').value.trim();
+  if (!topic) { toast('Please enter a topic'); return; }
+
+  var platforms = Object.keys(checkedPlatforms).filter(function(p) { return checkedPlatforms[p]; });
+  if (!platforms.length) { toast('Select at least one platform'); return; }
+
+  var btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  document.getElementById('social-results').innerHTML =
+    '<div style="padding:40px;text-align:center;color:var(--text-muted)">' +
+    '<div style="font-size:2rem;margin-bottom:12px">✨</div>Claude is crafting your posts…</div>';
+
+  try {
+    var data = await api('POST', '/api/social/generate', {
+      contentType:  document.getElementById('content-type').value,
+      topic:        topic,
+      platforms:    platforms,
+      count:        parseInt(document.getElementById('post-count').value, 10),
+      extraContext: document.getElementById('extra-context').value.trim(),
+    });
+    renderPosts(data.posts || []);
+    toast('✓ ' + (data.posts || []).length + ' posts generated');
+  } catch (e) {
+    document.getElementById('social-results').innerHTML =
+      '<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>' +
+      '<p style="color:#e05555">' + esc(e.message) + '</p></div>';
+    toast('Generation failed: ' + e.message, 4000);
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✨ Generate Posts';
+}
+
+var generatedPosts = [];
+
+function renderPosts(posts) {
+  generatedPosts = posts;
+  if (!posts.length) {
+    document.getElementById('social-results').innerHTML =
+      '<div class="empty-state"><p>No posts returned. Try again.</p></div>';
+    return;
+  }
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">' +
+    '<h2 style="font-size:1.2rem;font-weight:700;color:var(--brown-dark)">' + posts.length + ' Generated Posts</h2>' +
+    '<button onclick="copyAllPosts()" style="padding:8px 16px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;background:transparent;color:var(--text-muted);cursor:pointer">Copy all</button>' +
+    '</div><div class="post-grid">';
+
+  posts.forEach(function(p, i) {
+    var platLower = (p.platform || '').toLowerCase();
+    var platClass = ['instagram','facebook','tiktok'].indexOf(platLower) >= 0 ? platLower : 'default-platform';
+    html += '<div class="post-card">' +
+      '<div class="post-card-header">' +
+      '<span class="platform-tag ' + platClass + '">' + esc(p.platform || '') + '</span>' +
+      '<span class="type-label">' + esc(p.type || '') + '</span></div>' +
+      '<p class="post-caption">' + esc(p.caption || '') + '</p>' +
+      '<p class="post-hashtags">' + esc(p.hashtags || '') + '</p>' +
+      '<span class="post-cta">' + esc(p.cta || '') + '</span>' +
+      '<div style="margin-top:10px;text-align:right">' +
+      '<button class="copy-btn" onclick="copyPost(' + i + ')">Copy</button></div>' +
+      '</div>';
+  });
+  html += '</div>';
+  document.getElementById('social-results').innerHTML = html;
+}
+
+function copyPost(i) {
+  var p = generatedPosts[i];
+  if (!p) return;
+  navigator.clipboard.writeText([p.caption, p.hashtags, p.cta].filter(Boolean).join('\n\n'));
+  toast('Copied to clipboard ✓');
+}
+
+function copyAllPosts() {
+  var text = generatedPosts.map(function(p) {
+    return [(p.platform || '').toUpperCase(), p.caption, p.hashtags, p.cta].filter(Boolean).join('\n');
+  }).join('\n\n---\n\n');
+  navigator.clipboard.writeText(text);
+  toast('Copied all ' + generatedPosts.length + ' posts ✓');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Drive
+// ────────────────────────────────────────────────────────────────────────────
+var driveNavStack = [{ id: 'root', name: 'My Drive' }];
+var searchTimeout = null;
+
+var MIME_ICONS = {
+  'application/vnd.google-apps.folder': '📁',
+  'application/pdf': '📕',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '📊',
+  'application/vnd.ms-excel': '📊',
+  'text/csv': '📊',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '📝',
+  'application/msword': '📝',
+  'application/vnd.google-apps.document': '📝',
+  'application/vnd.google-apps.spreadsheet': '📊',
+  'application/vnd.google-apps.presentation': '📊',
+  'image/jpeg': '🖼️', 'image/png': '🖼️', 'image/gif': '🖼️', 'image/webp': '🖼️',
+  'application/zip': '📦', 'application/x-zip-compressed': '📦',
+  'video/mp4': '🎬', 'video/quicktime': '🎬',
+};
+
+function mimeIcon(m) { return MIME_ICONS[m] || '📄'; }
+
+function fmtSize(bytes) {
+  if (!bytes) return '';
+  var n = parseInt(bytes);
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
+  return (n / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  catch (e) { return ''; }
+}
+
+async function loadDrive(folderId) {
+  var content = document.getElementById('drive-content');
+  content.innerHTML = '<div class="empty-state">Loading…</div>';
+  try {
+    var data = await api('GET', '/api/drive/list?folderId=' + encodeURIComponent(folderId));
+
+    if (!data.configured) {
+      content.innerHTML =
+        '<div class="drive-unconfigured"><div class="uc-icon">☁️</div>' +
+        '<h3>Google Drive not connected</h3>' +
+        '<p style="margin-bottom:12px">Add your OAuth credentials to <code>.env</code> to browse Drive here.</p>' +
+        '<p style="font-size:.85rem">Need: <code>GOOGLE_CLIENT_ID</code> · <code>GOOGLE_CLIENT_SECRET</code> · <code>GOOGLE_REFRESH_TOKEN</code></p>' +
+        '</div>';
+      return;
+    }
+
+    renderDriveContent(data);
+
+    if (folderId === 'root') {
+      document.getElementById('tree-folders').innerHTML = data.folders.map(function(f) {
+        return '<div class="tree-item" data-id="' + f.id + '" onclick="driveNavigate(\'' + f.id + '\',' + JSON.stringify(f.name) + ')">📁 ' + esc(f.name) + '</div>';
+      }).join('');
+    }
+  } catch (e) {
+    content.innerHTML = '<div class="empty-state"><p style="color:#e05555">' + esc(e.message) + '</p></div>';
+  }
+}
+
+function renderDriveContent(data) {
+  var content = document.getElementById('drive-content');
+  if (!data.folders.length && !data.files.length) {
+    content.innerHTML = '<div class="empty-state" style="padding:48px">This folder is empty</div>';
+    return;
+  }
+  var html = '';
+  if (data.folders.length) {
+    html += '<div class="drive-section-label">Folders</div><div class="drive-grid">';
+    html += data.folders.map(function(f) {
+      return '<div class="drive-item" onclick="driveNavigate(\'' + f.id + '\',' + JSON.stringify(f.name) + ')">' +
+        '<div class="file-icon">📁</div>' +
+        '<div class="file-name" title="' + esc(f.name) + '">' + esc(f.name) + '</div>' +
+        '<div class="file-meta">' + fmtDate(f.modifiedTime) + '</div></div>';
+    }).join('');
+    html += '</div>';
+  }
+  if (data.files.length) {
+    html += '<div class="drive-section-label" style="margin-top:20px">Files</div><div class="drive-grid">';
+    html += data.files.map(function(f) {
+      var click = f.webViewLink ? 'window.open(\'' + f.webViewLink + '\',\'_blank\')' : '';
+      var sz = fmtSize(f.size);
+      var dt = fmtDate(f.modifiedTime);
+      return '<div class="drive-item" onclick="' + click + '">' +
+        '<div class="file-icon">' + mimeIcon(f.mimeType) + '</div>' +
+        '<div class="file-name" title="' + esc(f.name) + '">' + esc(f.name) + '</div>' +
+        '<div class="file-meta">' + (sz && dt ? sz + ' · ' + dt : sz + dt) + '</div></div>';
+    }).join('');
+    html += '</div>';
+  }
+  content.innerHTML = html;
+}
+
+function driveNavigate(folderId, name) {
+  document.querySelectorAll('.tree-item').forEach(function(el) {
+    el.classList.toggle('active',
+      el.getAttribute('data-id') === folderId || (folderId === 'root' && el.id === 'tree-root'));
+  });
+
+  if (folderId === 'root') {
+    driveNavStack = [{ id: 'root', name: 'My Drive' }];
+  } else {
+    var idx = driveNavStack.findIndex(function(s) { return s.id === folderId; });
+    if (idx >= 0) driveNavStack = driveNavStack.slice(0, idx + 1);
+    else driveNavStack.push({ id: folderId, name: name });
+  }
+
+  document.getElementById('breadcrumb').innerHTML = driveNavStack.map(function(s, i) {
+    return i < driveNavStack.length - 1
+      ? '<span class="bc-item" onclick="driveNavigate(\'' + s.id + '\',' + JSON.stringify(s.name) + ')">' + esc(s.name) + '</span><span class="bc-sep"> / </span>'
+      : '<span style="font-weight:600">' + esc(s.name) + '</span>';
+  }).join('');
+
+  loadDrive(folderId);
+}
+
+function driveLiveSearch(q) {
+  clearTimeout(searchTimeout);
+  if (!q.trim()) {
+    loadDrive(driveNavStack[driveNavStack.length - 1].id);
+    return;
+  }
+  searchTimeout = setTimeout(function() { driveSearch(q.trim()); }, 400);
+}
+
+async function driveSearch(q) {
+  var content = document.getElementById('drive-content');
+  content.innerHTML = '<div class="empty-state">Searching…</div>';
+  try {
+    var data = await api('GET', '/api/drive/search?q=' + encodeURIComponent(q));
+    var files = data.files || [];
+    if (!files.length) { content.innerHTML = '<div class="empty-state">No results found</div>'; return; }
+    var html = '<div class="drive-section-label">Search results for "' + esc(q) + '" — ' + files.length + ' file(s)</div><div class="drive-grid">';
+    html += files.map(function(f) {
+      var click = f.webViewLink ? 'window.open(\'' + f.webViewLink + '\',\'_blank\')' : '';
+      var sz = fmtSize(f.size); var dt = fmtDate(f.modifiedTime);
+      return '<div class="drive-item" onclick="' + click + '">' +
+        '<div class="file-icon">' + mimeIcon(f.mimeType) + '</div>' +
+        '<div class="file-name" title="' + esc(f.name) + '">' + esc(f.name) + '</div>' +
+        '<div class="file-meta">' + (sz && dt ? sz + ' · ' + dt : sz + dt) + '</div></div>';
+    }).join('');
+    html += '</div>';
+    content.innerHTML = html;
+  } catch (e) {
+    content.innerHTML = '<div class="empty-state"><p style="color:#e05555">' + esc(e.message) + '</p></div>';
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Utils
+// ────────────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Boot
+// ────────────────────────────────────────────────────────────────────────────
+if (TOKEN) {
+  showApp();
+}
+</script>
+</body>
+</html>

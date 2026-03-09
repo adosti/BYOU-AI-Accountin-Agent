@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentForge — Expense Tracker (Preview)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f4f6f9;
+      --surface:  #ffffff;
+      --border:   #e2e8f0;
+      --primary:  #4f46e5;
+      --primary-h:#4338ca;
+      --green:    #16a34a;
+      --red:      #dc2626;
+      --text:     #1e293b;
+      --muted:    #64748b;
+      --radius:   10px;
+      --shadow:   0 1px 4px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Preview banner ── */
+    .preview-banner {
+      background: #fef9c3;
+      border-bottom: 1px solid #fde047;
+      padding: 8px 24px;
+      font-size: 12px;
+      color: #713f12;
+      text-align: center;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+    header h1 span { color: var(--primary); }
+
+    .header-meta { font-size: 12px; color: var(--muted); }
+
+    /* ── Layout ── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ── Stats cards ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .card .label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .card .value {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -.5px;
+    }
+
+    .card .value.green { color: var(--green); }
+    .card .value.red   { color: var(--red); }
+    .card .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Section card ── */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .section-header h2 { font-size: 14px; font-weight: 700; }
+    .section-body { padding: 20px; }
+
+    /* ── Two-column grid ── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 680px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ── Forms (disabled / visual only in preview) ── */
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+    .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    select {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--text);
+      width: 100%;
+    }
+
+    input[type="file"] {
+      border: 2px dashed var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      width: 100%;
+      font-size: 13px;
+      cursor: not-allowed;
+      background: var(--bg);
+      color: var(--muted);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: not-allowed;
+      border: none;
+      opacity: .7;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+
+    .alert-success {
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-top: 12px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+    }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+    thead th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafbfc; }
+    tbody td { padding: 10px 14px; vertical-align: middle; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #eef2ff;
+      color: var(--primary);
+    }
+
+    .amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .amount.negative { color: var(--red); }
+    .amount.positive { color: var(--green); }
+
+    /* ── P&L breakdown ── */
+    .pl-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    @media (max-width: 480px) { .pl-grid { grid-template-columns: 1fr; } }
+
+    .pl-block h3 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .pl-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .pl-row:last-child { border-bottom: none; }
+    .pl-row .cat { color: var(--muted); }
+
+    .pl-total {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0 0;
+      font-weight: 700;
+      font-size: 14px;
+      border-top: 2px solid var(--border);
+      margin-top: 8px;
+    }
+
+    /* ── Chart ── */
+    .chart-wrap { position: relative; height: 240px; }
+
+    /* ── Date bar ── */
+    .date-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .date-bar label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .date-bar input[type="date"] { width: auto; }
+  </style>
+</head>
+<body>
+
+<div class="preview-banner">
+  ⚠ This is a static preview with sample data. Run the server and open <strong>http://localhost:3000</strong> to use the live version.
+</div>
+
+<!-- ── Header ── -->
+<header>
+  <h1>Agent<span>Forge</span> &mdash; Expense Tracker</h1>
+  <span class="header-meta">Sample Business &nbsp;·&nbsp; Fiscal Year 2026</span>
+</header>
+
+<main>
+
+  <!-- ── Summary stats ── -->
+  <div class="stats">
+    <div class="card">
+      <div class="label">Total Income</div>
+      <div class="value green">$38,500.00</div>
+      <div class="sub">all time</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Expenses</div>
+      <div class="value red">$9,847.62</div>
+      <div class="sub">all time</div>
+    </div>
+    <div class="card">
+      <div class="label">Net Position</div>
+      <div class="value green">$28,652.38</div>
+      <div class="sub">income − expenses</div>
+    </div>
+    <div class="card">
+      <div class="label">Tax Captured (YTD)</div>
+      <div class="value">$784.22</div>
+      <div class="sub">from receipt tax fields</div>
+    </div>
+  </div>
+
+  <!-- ── Upload + Add Income ── -->
+  <div class="grid-2">
+
+    <div class="section">
+      <div class="section-header"><h2>📄 Upload Receipt</h2></div>
+      <div class="section-body">
+        <input type="file" disabled placeholder="Choose a receipt image or PDF…" />
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" disabled>Upload &amp; Process</button>
+        </div>
+        <div class="alert-success" style="margin-top:12px;">
+          ✓ Receipt processed and saved successfully<br>
+          <small>Home Depot &bull; 2026-03-08 &bull; <strong>USD 84.32</strong> &bull; Office Supplies &bull; Confidence: 97%</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><h2>💰 Record Income</h2></div>
+      <div class="section-body">
+        <div class="form-row">
+          <div class="field">
+            <label>Source / Client</label>
+            <input type="text" value="Acme Corp — March invoice" disabled />
+          </div>
+          <div class="field" style="max-width:140px;">
+            <label>Date</label>
+            <input type="date" value="2026-03-09" disabled />
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:10px;">
+          <div class="field">
+            <label>Amount</label>
+            <input type="number" value="6500" disabled />
+          </div>
+          <div class="field" style="max-width:100px;">
+            <label>Currency</label>
+            <select disabled><option>USD</option></select>
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <input type="text" value="Revenue" disabled />
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" disabled>Save Income</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Reports ── -->
+  <div class="section">
+    <div class="section-header">
+      <h2>📊 Reports</h2>
+      <div class="date-bar">
+        <label>From</label>
+        <input type="date" value="2026-01-01" disabled />
+        <label>To</label>
+        <input type="date" value="2026-03-31" disabled />
+        <button class="btn btn-outline" disabled>Refresh</button>
+      </div>
+    </div>
+    <div class="section-body">
+
+      <!-- P&L stat cards -->
+      <div class="stats" style="margin-bottom:24px;">
+        <div class="card">
+          <div class="label">Revenue (Q1)</div>
+          <div class="value green">$38,500.00</div>
+        </div>
+        <div class="card">
+          <div class="label">Expenses (Q1)</div>
+          <div class="value red">$9,847.62</div>
+        </div>
+        <div class="card">
+          <div class="label">Net Profit</div>
+          <div class="value green">$28,652.38</div>
+        </div>
+        <div class="card">
+          <div class="label">Tax Deductible</div>
+          <div class="value">$784.22</div>
+        </div>
+      </div>
+
+      <!-- Breakdown + Chart -->
+      <div class="grid-2">
+
+        <div class="pl-grid" style="margin-top:0;">
+          <div class="pl-block">
+            <h3>Income by Category</h3>
+            <div class="pl-row"><span class="cat">Revenue</span><span class="amount positive">$38,500.00</span></div>
+            <div class="pl-total"><span>Total Revenue</span><span class="amount positive">$38,500.00</span></div>
+          </div>
+          <div class="pl-block">
+            <h3>Expenses by Category</h3>
+            <div class="pl-row"><span class="cat">Travel</span><span class="amount negative">$3,120.00</span></div>
+            <div class="pl-row"><span class="cat">Office Supplies</span><span class="amount negative">$1,840.50</span></div>
+            <div class="pl-row"><span class="cat">Meals &amp; Entertainment</span><span class="amount negative">$960.00</span></div>
+            <div class="pl-row"><span class="cat">Equipment</span><span class="amount negative">$2,450.00</span></div>
+            <div class="pl-row"><span class="cat">Software &amp; Subscriptions</span><span class="amount negative">$720.00</span></div>
+            <div class="pl-row"><span class="cat">Advertising</span><span class="amount negative">$757.12</span></div>
+            <div class="pl-total"><span>Total Expenses</span><span class="amount negative">$9,847.62</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px;">
+            Cash Flow &amp; 3-Month Forecast
+          </div>
+          <div class="chart-wrap">
+            <canvas id="cashflow-chart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Expenses table ── -->
+  <div class="section">
+    <div class="section-header">
+      <h2>🧾 Recent Expenses</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Vendor</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Tax</th>
+            <th>Payment</th>
+            <th>Receipt</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2026-03-08</td>
+            <td><strong>Home Depot</strong></td>
+            <td><span class="badge">Office Supplies</span></td>
+            <td class="amount negative">$84.32</td>
+            <td>$6.74</td>
+            <td>Credit Card</td>
+            <td><a href="#" style="color:var(--primary)">Drive ↗</a></td>
+          </tr>
+          <tr>
+            <td>2026-03-05</td>
+            <td><strong>Delta Airlines</strong></td>
+            <td><span class="badge">Travel</span></td>
+            <td class="amount negative">$420.00</td>
+            <td>$0.00</td>
+            <td>Credit Card</td>
+            <td><a href="#" style="color:var(--primary)">Drive ↗</a></td>
+          </tr>
+          <tr>
+            <td>2026-03-03</td>
+            <td><strong>Adobe Creative Cloud</strong></td>
+            <td><span class="badge">Software &amp; Subscriptions</span></td>
+            <td class="amount negative">$60.00</td>
+            <td>$4.80</td>
+            <td>Credit Card</td>
+            <td><a href="#" style="color:var(--primary)">Drive ↗</a></td>
+          </tr>
+          <tr>
+            <td>2026-02-28</td>
+            <td><strong>Chick-fil-A</strong></td>
+            <td><span class="badge">Meals &amp; Entertainment</span></td>
+            <td class="amount negative">$47.50</td>
+            <td>$3.80</td>
+            <td>Cash</td>
+            <td><span style="color:var(--muted)">—</span></td>
+          </tr>
+          <tr>
+            <td>2026-02-20</td>
+            <td><strong>Apple Store</strong></td>
+            <td><span class="badge">Equipment</span></td>
+            <td class="amount negative">$1,299.00</td>
+            <td>$103.92</td>
+            <td>Credit Card</td>
+            <td><a href="#" style="color:var(--primary)">Drive ↗</a></td>
+          </tr>
+          <tr>
+            <td>2026-02-14</td>
+            <td><strong>Google Ads</strong></td>
+            <td><span class="badge">Advertising</span></td>
+            <td class="amount negative">$350.00</td>
+            <td>$0.00</td>
+            <td>Credit Card</td>
+            <td><a href="#" style="color:var(--primary)">Drive ↗</a></td>
+          </tr>
+          <tr>
+            <td>2026-01-30</td>
+            <td><strong>Marriott Hotels</strong></td>
+            <td><span class="badge">Travel</span></td>
+            <td class="amount negative">$680.00</td>
+            <td>$54.40</td>
+            <td>Credit Card</td>
+            <td><a href="#" style="color:var(--primary)">Drive ↗</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Income table ── -->
+  <div class="section">
+    <div class="section-header"><h2>💵 Income Records</h2></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Source</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2026-03-01</td>
+            <td><strong>Acme Corp — March invoice</strong></td>
+            <td><span class="badge">Revenue</span></td>
+            <td class="amount positive">$6,500.00</td>
+            <td>Net 30</td>
+          </tr>
+          <tr>
+            <td>2026-02-01</td>
+            <td><strong>Acme Corp — February invoice</strong></td>
+            <td><span class="badge">Revenue</span></td>
+            <td class="amount positive">$6,500.00</td>
+            <td>Net 30</td>
+          </tr>
+          <tr>
+            <td>2026-02-15</td>
+            <td><strong>Globex Ltd — consulting</strong></td>
+            <td><span class="badge">Consulting</span></td>
+            <td class="amount positive">$4,500.00</td>
+            <td>Project milestone</td>
+          </tr>
+          <tr>
+            <td>2026-01-01</td>
+            <td><strong>Acme Corp — January invoice</strong></td>
+            <td><span class="badge">Revenue</span></td>
+            <td class="amount positive">$6,500.00</td>
+            <td>Net 30</td>
+          </tr>
+          <tr>
+            <td>2026-01-20</td>
+            <td><strong>Initech — logo design</strong></td>
+            <td><span class="badge">Design</span></td>
+            <td class="amount positive">$2,800.00</td>
+            <td><span style="color:var(--muted)">—</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Cash flow chart with sample data ────────────────────────────────────────
+
+const months   = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'];
+const actualN  = 3; // first 3 are actuals, last 3 are forecast
+
+const income   = [9300, 11000, 6500, 8933, 8933, 8933];
+const expenses = [3120, 2840, 3887, 3282, 3282, 3282];
+
+new Chart(document.getElementById('cashflow-chart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Income',
+        data: income,
+        backgroundColor: months.map((_, i) => i < actualN ? '#16a34a99' : '#16a34a33'),
+        borderColor: '#16a34a',
+        borderWidth: 1,
+      },
+      {
+        label: 'Expenses',
+        data: expenses,
+        backgroundColor: months.map((_, i) => i < actualN ? '#dc262699' : '#dc262633'),
+        borderColor: '#dc2626',
+        borderWidth: 1,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString()}`,
+          afterBody: (items) => {
+            const idx = items[0]?.dataIndex;
+            return idx >= actualN ? ['(forecast)'] : [];
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      y: { ticks: { callback: v => '$' + (v / 1000).toFixed(0) + 'k', font: { size: 10 } } },
+    },
+  },
+});
+</script>
+</body>
+</html>
