@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node --esm src/index.ts",
+    "dev": "tsx src/index.ts",
     "lint": "eslint 'src/**/*.ts'"
   },
   "dependencies": {
@@ -27,7 +27,7 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.11.5",
     "@types/uuid": "^9.0.7",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
     "typescript": "^5.3.3"
   }
 }
